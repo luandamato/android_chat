@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
+        android:padding="4dp"
+        android:textSize="15dp"
+        android:background="#aaaaff"
+        android:text="Hello, test"
+        android:id="@+id/lblMsg"
+        android:layout_centerHorizontal="true"/>
+
+
+</RelativeLayout>

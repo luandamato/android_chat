@@ -24,6 +24,7 @@ public class ChatAdapter extends RecyclerView.Adapter {
     private static final int msg_recebida = 1;
     private static final int img_enviada = 2;
     private static final int img_recebida = 3;
+    private static final int new_user = 4;
 
     private LayoutInflater infalter;
     private List<JSONObject> msgs = new ArrayList<>();
@@ -76,12 +77,25 @@ public class ChatAdapter extends RecyclerView.Adapter {
             lblNome = itemView.findViewById(R.id.lblNome);
         }
     }
+    private class NovoUsuarioCell extends RecyclerView.ViewHolder{
+
+        private TextView lblMsg;
+
+        public NovoUsuarioCell(@NonNull View itemView) {
+            super(itemView);
+
+            lblMsg = itemView.findViewById(R.id.lblMsg);
+        }
+    }
 
 
     @Override
     public int getItemViewType(int position) {
         JSONObject msg = msgs.get(position);
         try{
+            if (msg.has("entrou") && msg.getBoolean("entrou")){
+                return new_user;
+            }
             if (msg.getBoolean("enviado")){
                 if (msg.has("msg")){
                     return msg_enviada;
@@ -123,6 +137,9 @@ public class ChatAdapter extends RecyclerView.Adapter {
             case img_recebida:
                 view = infalter.inflate(R.layout.item_recive_image, parent, false);
                 return new ImagemRecebidaCell(view);
+            case new_user:
+                view = infalter.inflate(R.layout.item_new_user, parent, false);
+                return new NovoUsuarioCell(view);
         }
         return null;
     }
@@ -131,30 +148,37 @@ public class ChatAdapter extends RecyclerView.Adapter {
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         JSONObject msg = msgs.get(position);
         try{
-            if (msg.getBoolean("enviado")){
-                if (msg.has("msg")){
-                    MensagemEnviadaCell cell = (MensagemEnviadaCell) holder;
-                    cell.lblMsg.setText(msg.getString("msg"));
-                }
-                else{
-                    ImagemEnviadaCell cell = (ImagemEnviadaCell) holder;
-                    Bitmap imagem = getBitmapFromString(msg.getString("img"));
-                    cell.img.setImageBitmap(imagem);
-                }
+            if (msg.has("entrou") && msg.getBoolean("entrou")){
+                NovoUsuarioCell cell = (NovoUsuarioCell) holder;
+                cell.lblMsg.setText(msg.getString("nome"));
             }
             else{
-                if (msg.has("msg")){
-                    MensagemRecebidaCell cell = (MensagemRecebidaCell) holder;
-                    cell.lblMsg.setText(msg.getString("msg"));
-                    cell.lblNome.setText(msg.getString("nome"));
+                if (msg.getBoolean("enviado")){
+                    if (msg.has("msg")){
+                        MensagemEnviadaCell cell = (MensagemEnviadaCell) holder;
+                        cell.lblMsg.setText(msg.getString("msg"));
+                    }
+                    else{
+                        ImagemEnviadaCell cell = (ImagemEnviadaCell) holder;
+                        Bitmap imagem = getBitmapFromString(msg.getString("img"));
+                        cell.img.setImageBitmap(imagem);
+                    }
                 }
                 else{
-                    ImagemRecebidaCell cell = (ImagemRecebidaCell) holder;
-                    Bitmap imagem = getBitmapFromString(msg.getString("img"));
-                    cell.img.setImageBitmap(imagem);
-                    cell.lblNome.setText(msg.getString("nome"));
+                    if (msg.has("msg")){
+                        MensagemRecebidaCell cell = (MensagemRecebidaCell) holder;
+                        cell.lblMsg.setText(msg.getString("msg"));
+                        cell.lblNome.setText(msg.getString("nome"));
+                    }
+                    else{
+                        ImagemRecebidaCell cell = (ImagemRecebidaCell) holder;
+                        Bitmap imagem = getBitmapFromString(msg.getString("img"));
+                        cell.img.setImageBitmap(imagem);
+                        cell.lblNome.setText(msg.getString("nome"));
+                    }
                 }
             }
+
         }
         catch (Exception e){
             Log.i("erro msgm", e.toString());

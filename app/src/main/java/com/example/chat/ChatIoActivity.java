@@ -13,6 +13,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.JsonReader;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -35,7 +36,8 @@ import okhttp3.WebSocket;
 public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
 
     private String nome = "";
-    private String server_path = "http://18.230.130.206:3000";
+    //private String server_path = "http://18.230.130.206:3000";
+    private String server_path = "http://192.168.0.18:3000";
     private EditText txtMensagem;
     private TextView lblEnviar;
     private ImageView img;
@@ -59,6 +61,8 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
 
         mSocket.on("mensagemRecebida", onNewMessage);
         mSocket.on("mensagensAnteriores", historicoMensagens);
+        mSocket.on("novaConexao", onNewConnection);
+        mSocket.on(Socket.EVENT_CONNECT, conectar);
         mSocket.connect();
 
         txtMensagem = findViewById(R.id.txtMensagem);
@@ -124,6 +128,30 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
         }
     };
 
+    private Emitter.Listener onNewConnection = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+
+                    JSONObject o = new JSONObject();
+                    try{
+                        o.put("nome", data.getString("nome"));
+                        o.put("entrou", true);
+
+                        adapter.addItem(o);
+                        recyclerView.smoothScrollToPosition(adapter.getItemCount());
+                    }
+                    catch (JSONException e){
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+    };
+
     private Emitter.Listener historicoMensagens = new Emitter.Listener() {
         @Override
         public void call(final Object... args) {
@@ -147,6 +175,32 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
                         catch (JSONException e){
                             e.printStackTrace();
                         }
+                    }
+
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener conectar = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    //JSONObject data = (JSONObject) args[0];
+                    String token = ChatIoActivity.this.getSharedPreferences("_", MODE_PRIVATE).getString("fb", "empty");;
+                    Log.i("socketConectado", token);
+                    JSONObject o = new JSONObject();
+                    try{
+                        o.put("nome", nome);
+                        o.put("id", mSocket.id());
+                        o.put("pushTokenId", token);
+                        mSocket.emit("conectar", o);
+
+                    }
+                    catch (JSONException e){
+                        e.printStackTrace();
                     }
 
                 }
