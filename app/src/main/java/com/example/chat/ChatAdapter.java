@@ -93,7 +93,7 @@ public class ChatAdapter extends RecyclerView.Adapter {
     public int getItemViewType(int position) {
         JSONObject msg = msgs.get(position);
         try{
-            if (msg.has("entrou") && msg.getBoolean("entrou")){
+            if (msg.has("entrou")){
                 return new_user;
             }
             if (msg.getBoolean("enviado")){
@@ -148,9 +148,15 @@ public class ChatAdapter extends RecyclerView.Adapter {
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         JSONObject msg = msgs.get(position);
         try{
-            if (msg.has("entrou") && msg.getBoolean("entrou")){
+            if (msg.has("entrou")){
                 NovoUsuarioCell cell = (NovoUsuarioCell) holder;
-                cell.lblMsg.setText(msg.getString("nome"));
+                if (msg.getBoolean("entrou")){
+                    cell.lblMsg.setText(msg.getString("nome") + "Entrou");
+                }
+                else{
+                    cell.lblMsg.setText(msg.getString("nome") + "Saiu");
+                }
+
             }
             else{
                 if (msg.getBoolean("enviado")){

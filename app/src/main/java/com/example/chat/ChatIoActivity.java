@@ -26,6 +26,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 
 import io.socket.client.IO;
@@ -40,10 +41,16 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
     private String server_path = "http://192.168.0.18:3000";
     private EditText txtMensagem;
     private TextView lblEnviar;
+    private TextView lblNomeConversa;
+    private TextView lblIntegrantes;
     private ImageView img;
     private RecyclerView recyclerView;
     private int image_request_id = 1;
     private ChatAdapter adapter;
+
+    private Boolean dig = false;
+    private List<String> digitando = new ArrayList<>();
+    private List<JSONObject> conectados = new ArrayList<>();
 
     private Socket mSocket;
     {
@@ -59,18 +66,35 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat_io);
 
-        mSocket.on("mensagemRecebida", onNewMessage);
-        mSocket.on("mensagensAnteriores", historicoMensagens);
-        mSocket.on("novaConexao", onNewConnection);
-        mSocket.on(Socket.EVENT_CONNECT, conectar);
-        mSocket.connect();
+
 
         txtMensagem = findViewById(R.id.txtMensagem);
         lblEnviar = findViewById(R.id.lblEnviar);
+        lblNomeConversa = findViewById(R.id.lblNomeConversa);
+        lblIntegrantes = findViewById(R.id.lblIntegrantes);
         img = findViewById(R.id.imgChose);
         recyclerView = findViewById(R.id.recyclerView);
 
         nome = getIntent().getStringExtra("nome");adapter = new ChatAdapter(getLayoutInflater());
+
+        iniciarSocket();
+        configurarControles();
+
+    }
+
+    private void iniciarSocket(){
+        mSocket.on("mensagemRecebida", onNewMessage);
+        mSocket.on("mensagensAnteriores", historicoMensagens);
+        mSocket.on("conexoesAnteriores", historicoConexoes);
+        mSocket.on("novaConexao", onNewConnection);
+        mSocket.on("desconectado", onCloseConnection);
+        mSocket.on("digitando", onDigitando);
+        mSocket.on("parouDigitar", onParouDigitar);
+        mSocket.on(Socket.EVENT_CONNECT, conectar);
+        mSocket.connect();
+    }
+
+    private void configurarControles(){
         recyclerView.setAdapter(adapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -128,6 +152,48 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
         }
     };
 
+    private Emitter.Listener onDigitando = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+
+                    try{
+                       digitando.add(data.getString("nome"));
+                    }
+                    catch (Exception e){
+                        e.printStackTrace();
+                    }
+                    configurarLblDigitando();
+
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onParouDigitar = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+
+                    try{
+                        digitando.remove(data.getString("nome"));
+                    }
+                    catch (Exception e){
+                        e.printStackTrace();
+                    }
+                    configurarLblDigitando();
+
+                }
+            });
+        }
+    };
+
     private Emitter.Listener onNewConnection = new Emitter.Listener() {
         @Override
         public void call(final Object... args) {
@@ -147,6 +213,46 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
                     catch (JSONException e){
                         e.printStackTrace();
                     }
+
+                    try{
+                        conectados.add(data);
+                    }
+                    catch (Exception e){
+                        e.printStackTrace();
+                    }
+                    configurarLblDigitando();
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onCloseConnection = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONObject data = (JSONObject) args[0];
+
+                    JSONObject o = new JSONObject();
+                    try{
+                        o.put("nome", data.getString("nome"));
+                        o.put("entrou", false);
+
+                        adapter.addItem(o);
+                        recyclerView.smoothScrollToPosition(adapter.getItemCount());
+                    }
+                    catch (JSONException e){
+                        e.printStackTrace();
+                    }
+
+                    try{
+                        conectados.remove(data);
+                    }
+                    catch (Exception e){
+                        e.printStackTrace();
+                    }
+                    configurarLblDigitando();
                 }
             });
         }
@@ -182,6 +288,32 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
         }
     };
 
+    private Emitter.Listener historicoConexoes = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    JSONArray data = (JSONArray) args[0];
+
+
+                    for (int i = 0; i < data.length(); i++){
+                        JSONObject o = new JSONObject();
+                        try{
+                            o = data.getJSONObject(i);
+                            conectados.add(o);
+                        }
+                        catch (JSONException e){
+                            e.printStackTrace();
+                        }
+                    }
+                    configurarLblDigitando();
+
+                }
+            });
+        }
+    };
+
     private Emitter.Listener conectar = new Emitter.Listener() {
         @Override
         public void call(final Object... args) {
@@ -195,18 +327,74 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
                     try{
                         o.put("nome", nome);
                         o.put("id", mSocket.id());
-                        o.put("pushTokenId", token);
+                        //o.put("pushTokenId", token);
                         mSocket.emit("conectar", o);
+
+                        conectados.add(o);
 
                     }
                     catch (JSONException e){
                         e.printStackTrace();
                     }
+                    configurarLblDigitando();
 
                 }
             });
         }
     };
+
+    private void configurarLblDigitando(){
+        String str = "";
+        if (digitando.isEmpty()){
+            if (!conectados.isEmpty()){
+
+                for (JSONObject item: conectados) {
+                    try{
+                        if (!str.isEmpty()){
+                            str += ", ";
+                        }
+                        if (item.getString("id").equals(mSocket.id())){
+                            str += "você";
+                        }
+                        else{
+                            str += item.getString("nome");
+                        }
+                    }
+                    catch (Exception e){
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+        }
+        else{
+            if (digitando.size() > 3){
+                str = "Diversas pessoas estão digitando...";
+            }
+            else{
+                for (String item: digitando) {
+                    try{
+                        if (!str.isEmpty()){
+                            str += ",";
+                        }
+                        str += item;
+                    }
+                    catch (Exception e){
+                        e.printStackTrace();
+                    }
+
+                }
+                if(digitando.size() == 1){
+                    str += " está digitando...";
+                }
+                else{
+                    str += " estão digitando...";
+                }
+
+            }
+        }
+        lblIntegrantes.setText(str);
+    }
 
     private void sendImage(Bitmap image){
         ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -231,6 +419,20 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
 
     @Override
     public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+        if (!dig){
+            JSONObject o = new JSONObject();
+            try{
+                o.put("nome", nome);
+                o.put("id", mSocket.id());
+                mSocket.emit("digitando", o);
+
+            }
+            catch (JSONException e){
+                e.printStackTrace();
+            }
+            dig = true;
+        }
 
     }
 
@@ -257,6 +459,18 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
         lblEnviar.setVisibility(View.GONE);
         img.setVisibility(View.VISIBLE);
         txtMensagem.addTextChangedListener(this);
+
+        JSONObject o = new JSONObject();
+        dig = false;
+        try{
+            o.put("nome", nome);
+            o.put("id", mSocket.id());
+            mSocket.emit("parouDigitar", o);
+
+        }
+        catch (JSONException e){
+            e.printStackTrace();
+        }
     }
 
     @Override

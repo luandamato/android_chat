@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
                         // Log and toast
                         String msg =  token;
                         Log.d("TOKEN", msg);
-                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
                         getSharedPreferences("_", MODE_PRIVATE).edit().putString("fb", token).apply();
                     }
                 });
