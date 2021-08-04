@@ -26,6 +26,8 @@ public class ChatAdapter extends RecyclerView.Adapter {
     private static final int img_recebida = 3;
     private static final int new_user = 4;
 
+    private String nomeUltimaMensagem = "";
+
     private LayoutInflater infalter;
     private List<JSONObject> msgs = new ArrayList<>();
 
@@ -151,10 +153,10 @@ public class ChatAdapter extends RecyclerView.Adapter {
             if (msg.has("entrou")){
                 NovoUsuarioCell cell = (NovoUsuarioCell) holder;
                 if (msg.getBoolean("entrou")){
-                    cell.lblMsg.setText(msg.getString("nome") + "Entrou");
+                    cell.lblMsg.setText(msg.getString("nome") + " Entrou");
                 }
                 else{
-                    cell.lblMsg.setText(msg.getString("nome") + "Saiu");
+                    cell.lblMsg.setText(msg.getString("nome") + " Saiu");
                 }
 
             }
@@ -175,14 +177,21 @@ public class ChatAdapter extends RecyclerView.Adapter {
                         MensagemRecebidaCell cell = (MensagemRecebidaCell) holder;
                         cell.lblMsg.setText(msg.getString("msg"));
                         cell.lblNome.setText(msg.getString("nome"));
+                        if (nomeUltimaMensagem == msg.getString("nome")){
+                            cell.lblNome.setVisibility(View.GONE);
+                        }
                     }
                     else{
                         ImagemRecebidaCell cell = (ImagemRecebidaCell) holder;
                         Bitmap imagem = getBitmapFromString(msg.getString("img"));
                         cell.img.setImageBitmap(imagem);
                         cell.lblNome.setText(msg.getString("nome"));
+                        if (nomeUltimaMensagem == msg.getString("nome")){
+                            cell.lblNome.setVisibility(View.GONE);
+                        }
                     }
                 }
+                nomeUltimaMensagem = msg.getString("nome");
             }
 
         }

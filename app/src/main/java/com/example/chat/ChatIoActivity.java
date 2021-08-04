@@ -5,27 +5,37 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.Manifest;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.JsonReader;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.theartofdev.edmodo.cropper.CropImage;
+import com.theartofdev.edmodo.cropper.CropImageView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.net.URISyntaxException;
+import java.security.Permissions;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,7 +48,7 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
 
     private String nome = "";
     private String server_path = "http://18.230.130.206:3000";
-    //private String server_path = "http://192.168.0.18:3000";
+//    private String server_path = "http://192.168.0.18:3000";
     private EditText txtMensagem;
     private TextView lblEnviar;
     private TextView lblNomeConversa;
@@ -64,6 +74,10 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+//        this.requestWindowFeature(Window.FEATURE_NO_TITLE);
+//        this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        this.getSupportActionBar().hide();
+
         setContentView(R.layout.activity_chat_io);
 
 
@@ -119,10 +133,13 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
         });
 
         img.setOnClickListener(v ->{
-            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("image/*");
+//            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+//            intent.setType("image/*");
+//            startActivityForResult(Intent.createChooser(intent, "Imagem"), image_request_id);
 
-            startActivityForResult(Intent.createChooser(intent, "Imagem"), image_request_id);
+            CropImage.activity()
+                    .setGuidelines(CropImageView.Guidelines.ON)
+                    .start(this);
         });
     }
 
@@ -137,7 +154,8 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
                     JSONObject o = new JSONObject();
                     try{
                         o.put("nome", data.getString("nome"));
-                        o.put("msg", data.getString("msg"));
+                        if (data.has("msg")) o.put("msg", data.getString("msg"));
+                        if (data.has("img")) o.put("img", data.getString("img"));
                         o.put("id", data.getString("id"));
                         o.put("enviado", false);
 
@@ -247,7 +265,15 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
                     }
 
                     try{
-                        conectados.remove(data);
+                        int i = 0;
+                        for (JSONObject item: conectados){
+                            if (item.getString("nome").equals(data.getString("nome"))){
+                                conectados.remove(item);
+                                break;
+                            }
+                            i++;
+                        }
+                        //conectados.remove(i);
                     }
                     catch (Exception e){
                         e.printStackTrace();
@@ -271,7 +297,8 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
                         JSONObject o = new JSONObject();
                         try{
                             o.put("nome", data.getJSONObject(i).getString("nome"));
-                            o.put("msg", data.getJSONObject(i).getString("msg"));
+                            if (data.getJSONObject(i).has("msg")) o.put("msg", data.getJSONObject(i).getString("msg"));
+                            if (data.getJSONObject(i).has("img")) o.put("img", data.getJSONObject(i).getString("img"));
                             o.put("id", data.getJSONObject(i).getString("id"));
                             o.put("enviado", false);
 
@@ -486,17 +513,46 @@ public class ChatIoActivity extends AppCompatActivity implements TextWatcher {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
+            CropImage.ActivityResult result = CropImage.getActivityResult(data);
+            if (resultCode == RESULT_OK) {
+//                Uri frontUri = result.getUri();
+//                binding.imageFront.setImageURI(frontUri);
+//                String frontpathString = getRealPathFromURI(frontUri);
+//                frontfile = new File(frontpathString);
+//                frontfile = new File(frontpathString);des
+//                binding.tvFrontfileName.setText("File Name : "+ frontfile.getName());
+                try{
+//                    InputStream is = getContentResolver().openInputStream(data.getData());
+//                    Bitmap image = BitmapFactory.decodeStream(is);
+                    Uri selectedfile = result.getUri();
+                    if (selectedfile != null) {
+                       Bitmap image = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedfile);
+                        sendImage(image);
+                    }
 
-        if(requestCode == image_request_id && resultCode == RESULT_OK){
-            try{
-                InputStream is = getContentResolver().openInputStream(data.getData());
-                Bitmap image = BitmapFactory.decodeStream(is);
 
-                sendImage(image);
-            }
-            catch (Exception e){
-                e.printStackTrace();
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
+
+            } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
+                Exception error = result.getError();
             }
         }
+
+
+//        if(requestCode == image_request_id && resultCode == RESULT_OK){
+//            try{
+//                InputStream is = getContentResolver().openInputStream(data.getData());
+//                Bitmap image = BitmapFactory.decodeStream(is);
+//
+//                sendImage(image);
+//            }
+//            catch (Exception e){
+//                e.printStackTrace();
+//            }
+//        }
     }
 }

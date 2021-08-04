@@ -14,12 +14,15 @@
     <ImageView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:maxHeight="300dp"
+        android:maxWidth="300dp"
         android:layout_alignParentStart="true"
         android:layout_marginTop="4dp"
         android:layout_marginBottom="4dp"
         android:layout_marginEnd="10dp"
         android:src="@drawable/ic_baseline_image"
         android:id="@+id/img"
-        android:layout_below="@+id/lblNome"/>
+        android:layout_below="@+id/lblNome"
+        android:adjustViewBounds="true"/>
 
 </RelativeLayout>
